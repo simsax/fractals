@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <math.h>
+#include "vec.h"
 
 typedef struct {
     float red;
@@ -13,13 +13,37 @@ typedef struct {
 const int HEIGHT = 512;
 const int WIDTH = 512;
 
-RGBColor fragment(float u, float v)
+RGBColor stripes(Vec2 uv)
 {
     RGBColor color;
     int n = 20;
-    color.red = (1 + sin(u * n)) * 0.5;
-    color.green = (1 + cos(v * n)) * 0.5;
-    color.blue = (1 + sin((u + v) * n)) * 0.5;
+    color.red = (1 + sin(uv.x * n)) * 0.5;
+    color.green = (1 + cos(uv.y * n)) * 0.5;
+    color.blue = (1 + sin((uv.x + uv.y) * n)) * 0.5;
+
+    return color;
+}
+
+RGBColor circle(Vec2 uv)
+{
+    RGBColor color;
+    Vec2 center = { 0.5f, 0.5f };
+    float radius = 0.2;
+    Vec2 diff = vec2_sub(uv, center);
+    int res = vec2_length(diff) > radius;
+    color = (RGBColor) { 1, (float)res, (float)res };
+
+    return color;
+}
+
+RGBColor circle_gradient(Vec2 uv)
+{
+    RGBColor color;
+    Vec2 center = { 0.5f, 0.5f };
+    float radius = 0.2;
+    Vec2 diff = vec2_sub(uv, center);
+    float res = 1 - fmin(vec2_length(diff) / radius, 1);
+    color = (RGBColor) { res, 0, 0 };
 
     return color;
 }
@@ -39,11 +63,10 @@ int main(void)
             float u = (float)i / HEIGHT;
             float v = (float)j / WIDTH;
 
-            RGBColor color = fragment(u, v);
+            RGBColor color = circle_gradient((Vec2) { u, v });
 
-            fputc((int)(color.red * 255), file);
-            fputc((int)(color.green * 255), file);
-            fputc((int)(color.blue * 255), file);
+            fprintf(file, "%c%c%c", (char)(color.red * 255), (char)(color.green * 255),
+                (char)(color.blue * 255));
         }
     }
 
