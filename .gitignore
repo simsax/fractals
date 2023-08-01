@@ -1,6 +1,7 @@
 # my stuff
 build
 run.sh
+*.ppm
 
 # Prerequisites
 *.d
