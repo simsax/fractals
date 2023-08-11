@@ -4,6 +4,8 @@ project(fractals C)
 
 set(CMAKE_C_STANDARD 11)
 
+configure_file(Config.h.in ${CMAKE_BINARY_DIR}/Config.h)
+
 # download the submodules
 find_package(Git QUIET)
 
