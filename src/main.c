@@ -16,11 +16,6 @@
 #define HEIGHT 1024
 
 GLFWwindow* window;
-GLuint vbo;
-GLuint vao;
-
-float positions[12]
-    = { -1.0f, -1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 0.0f, 1.0f, 1.0f, 0.0f };
 
 float resolution[2] = { WIDTH, HEIGHT };
 
@@ -125,18 +120,9 @@ void init_window()
 
 void init_vao()
 {
+    GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-}
-
-void load_vbo()
-{
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
 }
 
 GLuint compile_shader(GLenum type, const char* shader_source)
@@ -300,7 +286,7 @@ void render_loop(GLuint shader_program, struct pollfd* fds, int fd)
         double current_time = glfwGetTime();
         glUniform1f(iTime_location, current_time);
         glUniform2fv(iResolution_location, 1, &resolution[0]);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -316,7 +302,6 @@ int main(void)
 
     init_window();
     init_vao();
-    load_vbo();
     GLuint shader_program = load_shaders();
     render_loop(shader_program, &fds, fd);
 
