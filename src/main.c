@@ -95,7 +95,7 @@ void init_window()
     }
     glfwMakeContextCurrent(window);
 
-    glfwSwapInterval(0); // enables v-sync
+    glfwSwapInterval(1); // enables v-sync
 
     // initialize glew
     if (glewInit() != GLEW_OK) {
