@@ -309,3 +309,6 @@ int main(void)
     close(fd);
     return 0;
 }
+
+// zoom on a particular point when holding left mouse, zoom out when holding right, reset when
+// pressing another button
