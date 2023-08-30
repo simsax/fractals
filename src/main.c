@@ -18,6 +18,12 @@
 GLFWwindow* window;
 
 float resolution[2] = { WIDTH, HEIGHT };
+float mouse_position[2] = { 0.0, 0.0 };
+float prev_mouse_position[2] = { -1.0, -1.0 };
+float x_coords[2] = { -2.0, 2.0 };
+float y_coords[2] = { -2.0, 2.0 };
+bool dragging = false;
+bool right_mouse_pressed = false;
 
 // returns a dynamically allocated buffer of chars which needs to be freed by the caller
 char* read_file(const char* path)
@@ -70,6 +76,94 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         glfwSetWindowShouldClose(window, true);
 }
 
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+        right_mouse_pressed = true;
+    if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
+        right_mouse_pressed = false;
+}
+
+void scale(float scaling_factor, float* arr, uint32_t size)
+{
+    for (int i = 0; i < size; i++) {
+        arr[i] *= scaling_factor;
+    }
+}
+
+void add_element(float point, float* arr, uint32_t size)
+{
+    for (int i = 0; i < size; i++) {
+        arr[i] += point;
+    }
+}
+
+void sub_element(float point, float* arr, uint32_t size)
+{
+    for (int i = 0; i < size; i++) {
+        arr[i] -= point;
+    }
+}
+
+void update_coords(float yoffset)
+{
+    float scaling_factor = 0.8;
+    float origin[2] = {
+        (1 - mouse_position[0]) * x_coords[0] + mouse_position[0] * x_coords[1],
+        (1 - mouse_position[1]) * y_coords[0] + mouse_position[1] * y_coords[1],
+    };
+    sub_element(origin[0], x_coords, 2);
+    sub_element(origin[1], y_coords, 2);
+    scale(yoffset > 0 ? scaling_factor : 1.0 / scaling_factor, x_coords, 2);
+    scale(yoffset > 0 ? scaling_factor : 1.0 / scaling_factor, y_coords, 2);
+    add_element(origin[0], x_coords, 2);
+    add_element(origin[1], y_coords, 2);
+}
+
+void translate(float xoffset, float yoffset)
+{
+    // transform offset from 0-1 to offset on the complex plane
+    float x_len = x_coords[1] - x_coords[0];
+    float y_len = y_coords[1] - y_coords[0];
+    xoffset *= x_len;
+    yoffset *= y_len;
+    sub_element(xoffset, x_coords, 2);
+    sub_element(yoffset, y_coords, 2);
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    double x, y;
+    glfwGetCursorPos(window, &x, &y);
+    mouse_position[0] = (float)x / resolution[0];
+    mouse_position[1] = 1 - (float)y / resolution[1]; // flip y coord
+    update_coords(yoffset);
+}
+
+void drag()
+{
+    float xoffset = mouse_position[0] - prev_mouse_position[0];
+    float yoffset = mouse_position[1] - prev_mouse_position[1];
+    translate(xoffset, yoffset);
+}
+
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        mouse_position[0] = xpos / resolution[0];
+        mouse_position[1] = 1 - ypos / resolution[1];
+        if (dragging) {
+            // not first press
+            drag();
+        }
+        dragging = true;
+        prev_mouse_position[0] = mouse_position[0];
+        prev_mouse_position[1] = mouse_position[1];
+    } else {
+        dragging = false;
+    }
+}
+
 void init_window()
 {
     glfwSetErrorCallback(error_callback);
@@ -109,6 +203,9 @@ void init_window()
     // set callbacks
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetKeyCallback(window, key_callback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetScrollCallback(window, scroll_callback);
+    glfwSetCursorPosCallback(window, cursor_position_callback);
 #ifndef NDEBUG
     // debug stuff
     glEnable(GL_DEBUG_OUTPUT);
@@ -274,11 +371,25 @@ void poll_shaders(GLuint* shader_program, struct pollfd* fds, int fd)
     }
 }
 
+void reset_coords()
+{
+    x_coords[0] = -2.0;
+    y_coords[0] = -2.0;
+    x_coords[1] = 2.0;
+    y_coords[1] = 2.0;
+}
+
 void render_loop(GLuint shader_program, struct pollfd* fds, int fd)
 {
     int iTime_location = glGetUniformLocation(shader_program, "iTime");
     int iResolution_location = glGetUniformLocation(shader_program, "iResolution");
+    int xcoords = glGetUniformLocation(shader_program, "xCoords");
+    int ycoords = glGetUniformLocation(shader_program, "yCoords");
     while (!glfwWindowShouldClose(window)) {
+        if (right_mouse_pressed) {
+            right_mouse_pressed = false;
+            reset_coords();
+        }
         poll_shaders(&shader_program, fds, fd);
         glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -286,6 +397,8 @@ void render_loop(GLuint shader_program, struct pollfd* fds, int fd)
         double current_time = glfwGetTime();
         glUniform1f(iTime_location, current_time);
         glUniform2fv(iResolution_location, 1, &resolution[0]);
+        glUniform2fv(xcoords, 1, &x_coords[0]);
+        glUniform2fv(ycoords, 1, &y_coords[0]);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -309,6 +422,3 @@ int main(void)
     close(fd);
     return 0;
 }
-
-// zoom on a particular point when holding left mouse, zoom out when holding right, reset when
-// pressing another button
