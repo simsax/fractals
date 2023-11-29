@@ -17,11 +17,13 @@
 
 GLFWwindow* window;
 
+typedef float Value;
+
 float resolution[2] = { WIDTH, HEIGHT };
 float mouse_position[2] = { 0.0, 0.0 };
 float prev_mouse_position[2] = { -1.0, -1.0 };
-float x_coords[2] = { -2.0, 2.0 };
-float y_coords[2] = { -2.0, 2.0 };
+Value x_coords[2] = { -2.0, 2.0 };
+Value y_coords[2] = { -2.0, 2.0 };
 bool dragging = false;
 bool right_mouse_pressed = false;
 
@@ -84,21 +86,21 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
         right_mouse_pressed = false;
 }
 
-void scale(float scaling_factor, float* arr, uint32_t size)
+void scale(float scaling_factor, Value* arr, uint32_t size)
 {
     for (int i = 0; i < size; i++) {
         arr[i] *= scaling_factor;
     }
 }
 
-void add_element(float point, float* arr, uint32_t size)
+void add_element(float point, Value* arr, uint32_t size)
 {
     for (int i = 0; i < size; i++) {
         arr[i] += point;
     }
 }
 
-void sub_element(float point, float* arr, uint32_t size)
+void sub_element(float point, Value* arr, uint32_t size)
 {
     for (int i = 0; i < size; i++) {
         arr[i] -= point;
@@ -399,6 +401,8 @@ void render_loop(GLuint shader_program, struct pollfd* fds, int fd)
         glUniform2fv(iResolution_location, 1, &resolution[0]);
         glUniform2fv(xcoords, 1, &x_coords[0]);
         glUniform2fv(ycoords, 1, &y_coords[0]);
+        // glUniform2dv(xcoords, 1, &x_coords[0]);
+        // glUniform2dv(ycoords, 1, &y_coords[0]);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glfwSwapBuffers(window);
         glfwPollEvents();

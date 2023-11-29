@@ -7,14 +7,21 @@ uniform float iTime;
 uniform vec2 xCoords;
 uniform vec2 yCoords;
 
-// source: https://gist.github.com/yiwenl/745bfea7f04c456e0101
-vec3 hsv2rgb(vec3 c)
+// source: https://iquilezles.org/articles/palettes
+vec3 palette(in float t)
 {
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
+    if (t == 1.0)
+        return vec3(0.0);
 
+    t = pow(t, 0.2);
+
+    vec3 a = vec3(0.5, 0.5, 0.5);
+    vec3 b = vec3(0.5, 0.5, 0.5);
+    vec3 c = vec3(1.0, 1.0, 0.5);
+    vec3 d = vec3(0.8, 0.9, 0.3);
+
+    return a + b*cos( 6.28318*(c*t+d) );
+}
 
 float mandelbrot(float x0, float y0, float escape_radius, int max_iterations, bool smooth_) {
 
@@ -41,6 +48,7 @@ float mandelbrot(float x0, float y0, float escape_radius, int max_iterations, bo
     return max_iterations;
 }
 
+
 void main()
 {
     vec2 uv = gl_FragCoord.xy / iResolution.x;
@@ -48,22 +56,13 @@ void main()
     float x0 = float(mix(xCoords.x, xCoords.y, uv.x));
     float y0 = float(mix(yCoords.x, yCoords.y, uv.y));
 
-    int max_iterations = 1000;
+    int max_iterations = 100;
     bool smooth_ = true;
     float escape_radius = 10.0;
 
     float escape_count = mandelbrot(x0, y0, escape_radius, max_iterations, smooth_);
     float stability = clamp(escape_count / float(max_iterations), 0.0, 1.0);
-    // float colorf = escape_count / float(max_iterations);
-    // colorf = 1.0 - clamp(colorf, 0.0, 1.0);
-    // vec3 color = vec3(colorf);
-    vec3 hsv = vec3(pow(stability, 0.6), 1.0, 1.0 - stability);
-    vec3 color = hsv2rgb(hsv);
+    vec3 color = palette(stability);
 
     fragColor = vec4(color, 1.0);
 }
-
-// problems:
-// - color depends on max_iterations
-// - find if it's possible to increase precision without too much performance loss
-// - check escape radius
